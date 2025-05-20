@@ -10,7 +10,7 @@ import java.util.Collection;
 import java.util.List;
 
 class RmMultiplicityValidator {
-    List<RMObjectValidationMessage> validate(CAttribute attribute, LazyPath pathSoFar, Object attributeValue) {
+    List<RMObjectValidationMessage> validate(CAttribute attribute, ValidationPath pathSoFar, Object attributeValue) {
         if (attributeValue instanceof Collection) {
             Collection<?> collectionValue = (Collection<?>) attributeValue;
             //validate multiplicity

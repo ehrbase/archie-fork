@@ -108,14 +108,14 @@ public class RMObjectValidator extends RMObjectValidatingProcessor {
     public List<RMObjectValidationMessage> validate(OperationalTemplate template, Object rmObject) {
         clearMessages();
         List<RMObjectWithPath> objects = Collections.singletonList(new RMObjectWithPath(rmObject, ""));
-        addAllMessages(runArchetypeValidations(objects, LazyPath.root(), template.getDefinition()));
+        addAllMessages(runArchetypeValidations(objects, ValidationPath.root(), template.getDefinition()));
         return getMessages();
     }
 
     public List<RMObjectValidationMessage> validate(Object rmObject) {
         clearMessages();
         List<RMObjectWithPath> objects = Collections.singletonList(new RMObjectWithPath(rmObject, "/"));
-        addAllMessages(runArchetypeValidations(objects, LazyPath.root(), null));
+        addAllMessages(runArchetypeValidations(objects, ValidationPath.root(), null));
         return getMessages();
     }
 
@@ -126,7 +126,7 @@ public class RMObjectValidator extends RMObjectValidatingProcessor {
         }
     }
 
-    private List<RMObjectValidationMessage> runArchetypeValidations(List<RMObjectWithPath> rmObjects, LazyPath path, CObject cobject) {
+    private List<RMObjectValidationMessage> runArchetypeValidations(List<RMObjectWithPath> rmObjects, ValidationPath path, CObject cobject) {
         List<RMObjectValidationMessage> result = rmOccurrenceValidator.validate(metaModel, rmObjects, path, cobject);
         if (rmObjects.isEmpty()) {
             //if this branch of the archetype tree is null in the reference model, we're done validating
@@ -160,7 +160,7 @@ public class RMObjectValidator extends RMObjectValidatingProcessor {
         return result;
     }
 
-    private List<RMObjectValidationMessage> validateInvariants(RMObjectWithPath objectWithPath, LazyPath pathSoFar) {
+    private List<RMObjectValidationMessage> validateInvariants(RMObjectWithPath objectWithPath, ValidationPath pathSoFar) {
         if (!validateInvariants) {
             return Collections.emptyList();
         }
@@ -198,7 +198,7 @@ public class RMObjectValidator extends RMObjectValidatingProcessor {
     }
 
     private void validateUnconstrainedObjectWithPath(
-            List<RMObjectValidationMessage> result, LazyPath path, RMObjectWithPath objectWithPath) {
+            List<RMObjectValidationMessage> result, ValidationPath path, RMObjectWithPath objectWithPath) {
         Object rmObject = objectWithPath.getObject();
         String archetypeId = lookup.getArchetypeIdFromArchetypedRmObject(rmObject);
         if (archetypeId != null) {
@@ -208,7 +208,7 @@ public class RMObjectValidator extends RMObjectValidatingProcessor {
         }
     }
 
-    private void validateArchetypeSlot(List<RMObjectWithPath> rmObjects, LazyPath path, CObject cobject, List<RMObjectValidationMessage> result) {
+    private void validateArchetypeSlot(List<RMObjectWithPath> rmObjects, ValidationPath path, CObject cobject, List<RMObjectValidationMessage> result) {
         ArchetypeSlot slot = (ArchetypeSlot) cobject;
         for (RMObjectWithPath objectWithPath : rmObjects) {
 
@@ -235,7 +235,7 @@ public class RMObjectValidator extends RMObjectValidatingProcessor {
         }
     }
 
-    private void validateArchetypedObject(List<RMObjectValidationMessage> result, CObject cobject, LazyPath path, RMObjectWithPath objectWithPath, String archetypeId) {
+    private void validateArchetypedObject(List<RMObjectValidationMessage> result, CObject cobject, ValidationPath path, RMObjectWithPath objectWithPath, String archetypeId) {
         OperationalTemplate operationalTemplate = operationalTemplateProvider.getOperationalTemplate(archetypeId);
         if (operationalTemplate != null) {
             //occurrences already validated, so nothing left to validate from the archetyepe root
@@ -255,7 +255,7 @@ public class RMObjectValidator extends RMObjectValidatingProcessor {
         }
     }
 
-    private void validateConstrainedObjectWithPath(List<RMObjectValidationMessage> result, CObject cobject, LazyPath path, RMObjectWithPath objectWithPath) {
+    private void validateConstrainedObjectWithPath(List<RMObjectValidationMessage> result, CObject cobject, ValidationPath path, RMObjectWithPath objectWithPath) {
         Class<?> classInConstraint = this.lookup.getClass(cobject.getRmTypeName());
         if (!classInConstraint.isAssignableFrom(objectWithPath.getObject().getClass())) {
             //not a matching constraint. Cannot validate. add error message and stop validating.
@@ -271,7 +271,7 @@ public class RMObjectValidator extends RMObjectValidatingProcessor {
         }
     }
 
-    private void validateObjectAttributes(List<RMObjectValidationMessage> result, CObject cobject, LazyPath path, RMObjectWithPath objectWithPath) {
+    private void validateObjectAttributes(List<RMObjectValidationMessage> result, CObject cobject, ValidationPath path, RMObjectWithPath objectWithPath) {
         Object rmObject = objectWithPath.getObject();
         Iterator<CAttribute> attributeIterator;
         if (cobject == null) {
@@ -301,14 +301,14 @@ public class RMObjectValidator extends RMObjectValidatingProcessor {
         }
     }
 
-    private void validateCAttributes(List<RMObjectValidationMessage> result, LazyPath path, RMObjectWithPath objectWithPath, Object rmObject, CObject cObject, Iterator<CAttribute> attributeIterator) {
+    private void validateCAttributes(List<RMObjectValidationMessage> result, ValidationPath path, RMObjectWithPath objectWithPath, Object rmObject, CObject cObject, Iterator<CAttribute> attributeIterator) {
         //the path contains an attribute, but is missing the [idx] part. So strip the attribute, and add the attribute plus the [idx] part.
-        LazyPath pathSoFar = path.addSubpath(objectWithPath);
+        ValidationPath pathSoFar = path.addSubpath(objectWithPath);
         attributeIterator.forEachRemaining(attribute ->
                 validateAttributes(result, attribute, cObject, rmObject, pathSoFar));
     }
 
-    private void validateAttributes(List<RMObjectValidationMessage> result, CAttribute attribute, CObject cobject, Object rmObject, LazyPath pathSoFar) {
+    private void validateAttributes(List<RMObjectValidationMessage> result, CAttribute attribute, CObject cobject, Object rmObject, ValidationPath pathSoFar) {
         String rmAttributeName = attribute.getRmAttributeName();
         RMPathQuery aPathQuery = queryCache.getApathQuery("/" + attribute.getRmAttributeName());
         Object attributeValue = aPathQuery.find(lookup, rmObject);
@@ -342,7 +342,7 @@ public class RMObjectValidator extends RMObjectValidatingProcessor {
         }
     }
 
-    private void validateSingleAttribute(List<RMObjectValidationMessage> result, CAttribute attribute, Object rmObject, LazyPath pathSoFar) {
+    private void validateSingleAttribute(List<RMObjectValidationMessage> result, CAttribute attribute, Object rmObject, ValidationPath pathSoFar) {
         List<List<RMObjectValidationMessage>> subResults = new ArrayList<>();
 
         for (CObject childCObject : attribute.getChildren()) {
@@ -382,7 +382,7 @@ public class RMObjectValidator extends RMObjectValidatingProcessor {
      * @param pathSoFar       The path of the attribute
      * @param cobject         The constraints that the attribute is checked against
      */
-    private List<RMObjectValidationMessage> isObservationEmpty(CAttribute attribute, String rmAttributeName, Object attributeValue, LazyPath pathSoFar, CObject cobject) {
+    private List<RMObjectValidationMessage> isObservationEmpty(CAttribute attribute, String rmAttributeName, Object attributeValue, ValidationPath pathSoFar, CObject cobject) {
         List<RMObjectValidationMessage> result = new ArrayList<>();
         CObject parent = attribute.getParent();
         boolean parentIsEvent = parent != null && parent.getRmTypeName().contains("EVENT");

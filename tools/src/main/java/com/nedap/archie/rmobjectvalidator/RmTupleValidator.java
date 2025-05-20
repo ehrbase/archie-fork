@@ -19,7 +19,7 @@ class RmTupleValidator {
         this.rmPrimitiveObjectValidator = rmPrimitiveObjectValidator;
     }
 
-    List<RMObjectValidationMessage> validate(CObject cobject, LazyPath pathSoFar, List<RMObjectWithPath> rmObjects, CAttributeTuple tuple) {
+    List<RMObjectValidationMessage> validate(CObject cobject, ValidationPath pathSoFar, List<RMObjectWithPath> rmObjects, CAttributeTuple tuple) {
         List<RMObjectValidationMessage> result = new ArrayList<>();
         if (rmObjects.size() != 1) {
             String message = RMObjectValidationMessageIds.rm_TUPLE_CONSTRAINT.getMessage(cobject.toString(), rmObjects.toString());
@@ -47,7 +47,7 @@ class RmTupleValidator {
      *
      * This will check each attribute in the tuple individually to get more specific validation messages.
      */
-    private List<RMObjectValidationMessage> validateSingleTuple(LazyPath pathSoFar, Object rmObject, CAttributeTuple attributeTuple) {
+    private List<RMObjectValidationMessage> validateSingleTuple(ValidationPath pathSoFar, Object rmObject, CAttributeTuple attributeTuple) {
         List<RMObjectValidationMessage> result = new ArrayList<>();
 
         CPrimitiveTuple tuple = attributeTuple.getTuples().get(0);
@@ -57,7 +57,7 @@ class RmTupleValidator {
             String attributeName = attribute.getRmAttributeName();
             CPrimitiveObject<?, ?> cPrimitiveObject = tuple.getMembers().get(index);
             Object value = RMObjectAttributes.getAttributeValueFromRMObject(rmObject, attributeName, lookup);
-            LazyPath path = pathSoFar.addChild(attributeName, cPrimitiveObject);
+            ValidationPath path = pathSoFar.addChild(attributeName, cPrimitiveObject);
 
             result.addAll(rmPrimitiveObjectValidator.validate_inner(value, path, cPrimitiveObject));
 
