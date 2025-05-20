@@ -10,13 +10,13 @@ import java.util.ArrayList;
 import java.util.List;
 
 class RmOccurrenceValidator {
-    List<RMObjectValidationMessage> validate(MetaModel metaModel, List<RMObjectWithPath> rmObjects, String pathSoFar, CObject cobject) {
+    List<RMObjectValidationMessage> validate(MetaModel metaModel, List<RMObjectWithPath> rmObjects, LazyPath pathSoFar, CObject cobject) {
         if(cobject != null) {
             MultiplicityInterval occurrences = cobject.effectiveOccurrences(metaModel::referenceModelPropMultiplicity);
             if (occurrences != null && !occurrences.has(rmObjects.size())) {
                 String message = RMObjectValidationMessageIds.rm_OCCURRENCE_MISMATCH.getMessage(rmObjects.size(), occurrences.toString());
                 RMObjectValidationMessageType messageType = occurrences.isMandatory() ? RMObjectValidationMessageType.REQUIRED : RMObjectValidationMessageType.DEFAULT;
-                return Lists.newArrayList(new RMObjectValidationMessage(cobject, pathSoFar, message, messageType));
+                return Lists.newArrayList(new RMObjectValidationMessage(cobject, pathSoFar.createPathString(), message, messageType));
             }
 
         }

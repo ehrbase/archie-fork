@@ -34,7 +34,10 @@ public class RMObjectValidatingProcessor {
     }
 
     protected void addAllMessages(Collection<RMObjectValidationMessage> messages) {
-        this.messages.addAll(messages);
+        //prevent that ArrayList.elementData is created if messages is empty
+        if (!messages.isEmpty()) {
+            this.messages.addAll(messages);
+        }
     }
 
     protected void addAllMessagesFrom(RMObjectValidatingProcessor other) {

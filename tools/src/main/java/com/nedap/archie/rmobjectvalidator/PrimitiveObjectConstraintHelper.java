@@ -12,10 +12,9 @@ import com.nedap.archie.base.Interval;
 import com.nedap.archie.base.terminology.TerminologyCode;
 import com.nedap.archie.terminology.OpenEHRTerminologyAccess;
 
-import java.net.URI;
-import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
+import java.util.stream.Stream;
 
 class PrimitiveObjectConstraintHelper {
     private final boolean failOnUnknownTerminologyId;
@@ -122,10 +121,13 @@ class PrimitiveObjectConstraintHelper {
         if(terminologyCode.isConstraintRequired()) {
             if (value == null) return false;
 
-            List<String> values;
+            String codeString = value.getCodeString();
+            if (codeString == null) return false;
+
+            Stream<String> values;
             String terminologyId = value.getTerminologyId();
             if (terminologyId == null || terminologyId.equalsIgnoreCase("local") || AOMUtils.isValueSetCode(value.getTerminologyId())) {
-                values = terminologyCode.getValueSetExpanded();
+                values = terminologyCode.getValueSetExpanded().stream();
             } else if (terminologyId.equalsIgnoreCase("openehr")) {
                 values = getOpenEHRValueSetExpanded(terminologyCode);
             } else if (terminologyId.equalsIgnoreCase("IANA_media-types")) {
@@ -138,60 +140,44 @@ class PrimitiveObjectConstraintHelper {
                 return !failOnUnknownTerminologyId;
             }
 
-            if(values != null && !values.isEmpty()) {
-                return value.getCodeString() != null && values.contains(value.getCodeString());
-            }
+            return values.anyMatch(codeString::equals);
+
         } else {
             return true;
         }
-
-        return false;
     }
 
-    private List<String> getOpenEHRValueSetExpanded(CTerminologyCode terminologyCode) {
-        List<String> atCodes = terminologyCode.getValueSetExpanded();
+    private Stream<String> getOpenEHRValueSetExpanded(CTerminologyCode terminologyCode) {
         ArchetypeTerminology terminology = getTerminology(terminologyCode);
+        if (terminology == null) {
+            return Stream.empty();
+        }
+        List<String> atCodes = terminologyCode.getValueSetExpanded();
         OpenEHRTerminologyAccess terminologyAccess = OpenEHRTerminologyAccess.getInstance();
-        List<String> result = new ArrayList<>();
 
-        if(terminology == null) {
-            return result;
-        }
-
-        for(String atCode : atCodes) {
-            URI termBinding = terminology.getTermBinding("openehr", atCode);
-            if (termBinding != null) {
-                String code = terminologyAccess.parseTerminologyURI(termBinding.toString());
-                if (code != null) {
-                    result.add(code);
-                }
-            }
-        }
-
-        return result;
+        return atCodes.stream()
+                .map(atCode -> terminology.getTermBinding("openehr", atCode))
+                .filter(Objects::nonNull)
+                .map(Objects::toString)
+                .map(terminologyAccess::parseTerminologyURI)
+                .filter(Objects::nonNull);
     }
 
-    private List<String> getIANAMediaTypesValueSetExpanded(CTerminologyCode terminologyCode) {
-        List<String> atCodes = terminologyCode.getValueSetExpanded();
+    private Stream<String> getIANAMediaTypesValueSetExpanded(CTerminologyCode terminologyCode) {
         ArchetypeTerminology terminology = getTerminology(terminologyCode);
-        OpenEHRTerminologyAccess terminologyAccess = OpenEHRTerminologyAccess.getInstance();
-        List<String> result = new ArrayList<>();
-
         if(terminology == null) {
-            return result;
+            return Stream.empty();
         }
 
-        for (String atCode : atCodes) {
-            URI termBinding = terminology.getTermBinding("IANA_media-types", atCode);
-            if (termBinding != null) {
-                String value = terminologyAccess.parseIANATerminologyURI(termBinding.toString());
-                if (value != null) {
-                    result.add(value);
-                }
-            }
-        }
+        List<String> atCodes = terminologyCode.getValueSetExpanded();
+        OpenEHRTerminologyAccess terminologyAccess = OpenEHRTerminologyAccess.getInstance();
 
-        return result;
+        return atCodes.stream()
+                .map(atCode -> terminology.getTermBinding("IANA_media-types", atCode))
+                .filter(Objects::nonNull)
+                .map(Objects::toString)
+                .map(terminologyAccess::parseIANATerminologyURI)
+                .filter(Objects::nonNull);
     }
 
     private ArchetypeTerminology getTerminology(CTerminologyCode cTerminologyCode) {

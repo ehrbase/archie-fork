@@ -19,11 +19,11 @@ class RmTupleValidator {
         this.rmPrimitiveObjectValidator = rmPrimitiveObjectValidator;
     }
 
-    List<RMObjectValidationMessage> validate(CObject cobject, String pathSoFar, List<RMObjectWithPath> rmObjects, CAttributeTuple tuple) {
+    List<RMObjectValidationMessage> validate(CObject cobject, LazyPath pathSoFar, List<RMObjectWithPath> rmObjects, CAttributeTuple tuple) {
         List<RMObjectValidationMessage> result = new ArrayList<>();
         if (rmObjects.size() != 1) {
             String message = RMObjectValidationMessageIds.rm_TUPLE_CONSTRAINT.getMessage(cobject.toString(), rmObjects.toString());
-            result.add(new RMObjectValidationMessage(cobject, pathSoFar, message));
+            result.add(new RMObjectValidationMessage(cobject, pathSoFar.createPathString(), message));
             return result;
         }
         Object rmObject = rmObjects.get(0).getObject();
@@ -36,7 +36,7 @@ class RmTupleValidator {
             if(result.isEmpty()) {
                 // Fall back to generic validation message
                 String message = RMObjectValidationMessageIds.rm_TUPLE_MISMATCH.getMessage(tuple.toString());
-                result.add(new RMObjectValidationMessage(cobject, pathSoFar, message));
+                result.add(new RMObjectValidationMessage(cobject, pathSoFar.createPathString(), message));
             }
         }
         return result;
@@ -47,7 +47,7 @@ class RmTupleValidator {
      *
      * This will check each attribute in the tuple individually to get more specific validation messages.
      */
-    private List<RMObjectValidationMessage> validateSingleTuple(String pathSoFar, Object rmObject, CAttributeTuple attributeTuple) {
+    private List<RMObjectValidationMessage> validateSingleTuple(LazyPath pathSoFar, Object rmObject, CAttributeTuple attributeTuple) {
         List<RMObjectValidationMessage> result = new ArrayList<>();
 
         CPrimitiveTuple tuple = attributeTuple.getTuples().get(0);
@@ -57,7 +57,7 @@ class RmTupleValidator {
             String attributeName = attribute.getRmAttributeName();
             CPrimitiveObject<?, ?> cPrimitiveObject = tuple.getMembers().get(index);
             Object value = RMObjectAttributes.getAttributeValueFromRMObject(rmObject, attributeName, lookup);
-            String path = pathSoFar + "/" + attributeName + "[" + cPrimitiveObject.getNodeId() + "]";
+            LazyPath path = pathSoFar.add(attributeName, cPrimitiveObject);
 
             result.addAll(rmPrimitiveObjectValidator.validate_inner(value, path, cPrimitiveObject));
 
