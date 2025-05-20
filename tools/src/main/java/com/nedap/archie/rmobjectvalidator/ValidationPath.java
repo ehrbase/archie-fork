@@ -7,43 +7,43 @@ import com.nedap.archie.query.RMObjectWithPath;
  * Postpones the creation of path strings.
  * Only for failed validations the strings need to be constructed.
  */
-public final class LazyPath {
+public final class ValidationPath {
 
-    private static final LazyPath ROOT = new LazyPath(null, false, null, null);
+    private static final ValidationPath ROOT = new ValidationPath(null, false, null, null);
 
-    private final LazyPath parent;
+    private final ValidationPath parent;
     private final boolean fromParent;
     private final String path;
     private final String nodeId;
 
-    private LazyPath(LazyPath parent, boolean fromParent, String path, String nodeId) {
+    private ValidationPath(ValidationPath parent, boolean fromParent, String path, String nodeId) {
         this.parent = parent;
         this.fromParent = fromParent;
         this.path = path;
         this.nodeId = nodeId;
     }
 
-    public static LazyPath root() {
+    public static ValidationPath root() {
         return ROOT;
     }
 
-    static LazyPath of(String path) {
+    static ValidationPath of(String path) {
         return ROOT.addSubpath(path);
     }
 
-    public LazyPath addChild(String attributeName, CPrimitiveObject<?, ?> cPrimitiveObject) {
-        return new LazyPath(this, false, attributeName, cPrimitiveObject.getNodeId());
+    public ValidationPath addChild(String attributeName, CPrimitiveObject<?, ?> cPrimitiveObject) {
+        return new ValidationPath(this, false, attributeName, cPrimitiveObject.getNodeId());
     }
 
-    public LazyPath addSubpath(String subpath) {
-        return new LazyPath(this, false, subpath, null);
+    public ValidationPath addSubpath(String subpath) {
+        return new ValidationPath(this, false, subpath, null);
     }
 
     /**
      * pathSoFar ends with an attribute, but objectWithPath contains it, so remove that.
      */
-    public LazyPath addSubpath(RMObjectWithPath subpath) {
-        return  new LazyPath(this, true, subpath.getPath(), null);
+    public ValidationPath addSubpath(RMObjectWithPath subpath) {
+        return  new ValidationPath(this, true, subpath.getPath(), null);
     }
 
 
