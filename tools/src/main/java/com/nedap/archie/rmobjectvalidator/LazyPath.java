@@ -1,129 +1,116 @@
 package com.nedap.archie.rmobjectvalidator;
 
 import com.nedap.archie.aom.CPrimitiveObject;
+import com.nedap.archie.query.RMObjectWithPath;
 
 /**
  * Postpones the creation of path strings.
  * Only for failed validations the strings need to be constructed.
  */
-public interface LazyPath {
+public final class LazyPath {
+
+    private static final LazyPath ROOT = new LazyPath(null, false, null, null);
+
+    private final LazyPath parent;
+    private final boolean fromParent;
+    private final String path;
+    private final String nodeId;
+
+    private LazyPath(LazyPath parent, boolean fromParent, String path, String nodeId) {
+        this.parent = parent;
+        this.fromParent = fromParent;
+        this.path = path;
+        this.nodeId = nodeId;
+    }
+
+    public static LazyPath root() {
+        return ROOT;
+    }
 
     static LazyPath of(String path) {
-        return new SimpleLazyPath(null, path, null);
+        return ROOT.addSubpath(path);
     }
 
-    default LazyPath add(String rmAttributeName) {
-        return new SimpleLazyPath(this, rmAttributeName, null);
+    public LazyPath addChild(String attributeName, CPrimitiveObject<?, ?> cPrimitiveObject) {
+        return new LazyPath(this, false, attributeName, cPrimitiveObject.getNodeId());
     }
 
-    default LazyPath add(String attributeName, CPrimitiveObject<?, ?> cPrimitiveObject) {
-        return new SimpleLazyPath(this, attributeName, cPrimitiveObject.getNodeId());
+    public LazyPath addSubpath(String subpath) {
+        return new LazyPath(this, false, subpath, null);
     }
 
-    default LazyPath joinPaths(String other, boolean enforceSlash) {
-        return new LazyPathJoin(this, enforceSlash, other);
+    /**
+     * pathSoFar ends with an attribute, but objectWithPath contains it, so remove that.
+     */
+    public LazyPath addSubpath(RMObjectWithPath subpath) {
+        return  new LazyPath(this, true, subpath.getPath(), null);
     }
 
-    default LazyPath stripLastPathSegment() {
-        return new LazyStripLastPathSegment(this);
-    }
 
-    String createPathString();
-
-    final class SimpleLazyPath implements LazyPath {
-        private final LazyPath parent;
-        private final String path;
-        private final String nodeId;
-
-        public SimpleLazyPath(LazyPath parent, String path, String nodeId) {
-            this.parent = parent;
-            this.path = path;
-            this.nodeId = nodeId;
+    public String createPathString() {
+        if (parent == null) {
+            return "/";
         }
 
-        @Override
-        public String createPathString() {
-            String p = path;
-            if (nodeId != null) {
-                p = p + '[' + nodeId + ']';
-            }
-            if (parent == null) {
-                return p;
-            } else {
-                return parent + "/" + p;
-            }
+        String parentPath;
+        if (fromParent) {
+            parentPath = stripLastPathSegment(parent.createPathString());
+        } else{
+            parentPath = parent.createPathString();
         }
 
-        public String toString() {
-            return createPathString();
+        String p;
+        if (path.startsWith("/")) {
+            p = joinPaths(parentPath, path);
+        } else {
+            p = joinPaths(parentPath, "/", path);
+        }
+
+        if (nodeId == null) {
+            return p;
+        } else {
+            return p + '[' + nodeId + ']';
         }
     }
 
-    final class LazyPathJoin implements LazyPath {
-        private final LazyPath parent;
-        private final String path;
-        private final boolean enforceSlash;
+    public String toString() {
+        return createPathString();
+    }
 
-        public LazyPathJoin(LazyPath parent, boolean enforceSlash, String path) {
-            this.parent = parent;
-            this.enforceSlash = enforceSlash;
-            this.path = path;
+    private static String joinPaths(String... pathElements) {
+        if(pathElements.length == 0) {
+            return "/";
         }
-
-        @Override
-        public String createPathString() {
-            if (enforceSlash) {
-                return joinPaths(parent.createPathString(), "/", path);
-            } else {
-                return joinPaths(parent.createPathString(), path);
-            }
-        }
-
-        public String toString() {
-            return createPathString();
-        }
-        private static String joinPaths(String... pathElements) {
-            if(pathElements.length == 0) {
+        if(pathElements.length == 1) {
+            String path =  pathElements[0];
+            if(path.isEmpty()) {
                 return "/";
             }
-            if(pathElements.length == 1) {
-                String path =  pathElements[0];
-                if(path.isEmpty()) {
-                    return "/";
-                }
-                return path;
-            }
-            StringBuilder result = new StringBuilder();
-            boolean lastCharacterWasSlash = false;
-            for(String pathElement:pathElements) {
-                if(lastCharacterWasSlash && pathElement.startsWith("/")) {
-                    result.append(pathElement.substring(1));
-                } else {
-                    result.append(pathElement);
-                }
-                if(!pathElement.isEmpty()) {
-                    lastCharacterWasSlash = pathElement.charAt(pathElement.length() - 1) == '/';
-                }
-            }
-            return result.toString();
+            return path;
         }
+        StringBuilder result = new StringBuilder();
+        boolean lastCharacterWasSlash = false;
+        for(String pathElement:pathElements) {
+            if(lastCharacterWasSlash && pathElement.startsWith("/")) {
+                result.append(pathElement, 1, pathElement.length());
+            } else {
+                result.append(pathElement);
+            }
+            if(!pathElement.isEmpty()) {
+                lastCharacterWasSlash = pathElement.charAt(pathElement.length() - 1) == '/';
+            }
+        }
+        return result.toString();
     }
 
-    // RMObjectValidationUtil.stripLastPathSegment(pathSoFar)
-    final class LazyStripLastPathSegment implements LazyPath {
-        private final LazyPath child;
-
-        public LazyStripLastPathSegment(LazyPath child) {
-            this.child = child;
+    private static String stripLastPathSegment(String path) {
+        if (path.equals("/")) {
+            return "";
         }
-
-        @Override
-        public String createPathString() {
-            return RMObjectValidationUtil.stripLastPathSegment(child.createPathString());
+        int lastSlashIndex = path.lastIndexOf('/');
+        if (lastSlashIndex == -1) {
+            return path;
         }
-
-        public String toString() {
-            return createPathString();
-        }
+        return path.substring(0, lastSlashIndex);
     }
 }

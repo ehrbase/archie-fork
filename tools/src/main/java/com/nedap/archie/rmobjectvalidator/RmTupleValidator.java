@@ -57,7 +57,7 @@ class RmTupleValidator {
             String attributeName = attribute.getRmAttributeName();
             CPrimitiveObject<?, ?> cPrimitiveObject = tuple.getMembers().get(index);
             Object value = RMObjectAttributes.getAttributeValueFromRMObject(rmObject, attributeName, lookup);
-            LazyPath path = pathSoFar.add(attributeName, cPrimitiveObject);
+            LazyPath path = pathSoFar.addChild(attributeName, cPrimitiveObject);
 
             result.addAll(rmPrimitiveObjectValidator.validate_inner(value, path, cPrimitiveObject));
 
