@@ -10,7 +10,7 @@ import java.util.Collection;
 import java.util.List;
 
 class RmMultiplicityValidator {
-    List<RMObjectValidationMessage> validate(CAttribute attribute, String pathSoFar, Object attributeValue) {
+    List<RMObjectValidationMessage> validate(CAttribute attribute, LazyPath pathSoFar, Object attributeValue) {
         if (attributeValue instanceof Collection) {
             Collection<?> collectionValue = (Collection<?>) attributeValue;
             //validate multiplicity
@@ -18,7 +18,7 @@ class RmMultiplicityValidator {
             if (cardinality != null) {
                 if (!cardinality.getInterval().has(collectionValue.size())) {
                     String message = RMObjectValidationMessageIds.rm_CARDINALITY_MISMATCH.getMessage(cardinality.getInterval().toString());
-                    return Lists.newArrayList(new RMObjectValidationMessage(attribute, pathSoFar, message, RMObjectValidationMessageType.CARDINALITY_MISMATCH));
+                    return Lists.newArrayList(new RMObjectValidationMessage(attribute, pathSoFar.createPathString(), message, RMObjectValidationMessageType.CARDINALITY_MISMATCH));
                 }
             }
         } else {
@@ -28,7 +28,7 @@ class RmMultiplicityValidator {
                     String message = RMObjectValidationMessageIds.rm_EXISTENCE_MISMATCH.getMessage(attribute.getRmAttributeName(),
                             attribute.getParent() == null ? "Unknown type" : attribute.getParent().getRmTypeName(), existence.toString());
 
-                    return Lists.newArrayList((new RMObjectValidationMessage(attribute, pathSoFar, message, RMObjectValidationMessageType.REQUIRED)));
+                    return Lists.newArrayList((new RMObjectValidationMessage(attribute, pathSoFar.createPathString(), message, RMObjectValidationMessageType.REQUIRED)));
                 }
             }
         }

@@ -10,6 +10,7 @@ import com.nedap.archie.rminfo.RMAttributeInfo;
 import com.nedap.archie.rminfo.RMTypeInfo;
 
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 import java.util.Set;
 import java.util.stream.Collectors;
@@ -45,13 +46,14 @@ class RMObjectValidationUtil {
 
     public static List<CAttribute> getDefaultAttributeConstraints(CObject cObject, List<CAttribute> attributes, ModelInfoLookup lookup, ModelConstraintImposer constraintImposer) {
         List<CAttribute> result = new ArrayList<>();
-        Set<String> alreadyConstrainedAttributes = attributes.stream()
-                .map(attribute -> attribute.getRmAttributeName())
-                .collect(Collectors.toSet());
 
         RMTypeInfo typeInfo = lookup.getTypeInfo(cObject.getRmTypeName());
 
         if(typeInfo != null) {
+            Set<String> alreadyConstrainedAttributes = attributes.isEmpty()
+                    ? Collections.emptySet()
+                    : attributes.stream().map(CAttribute::getRmAttributeName).collect(Collectors.toSet());
+
             for (RMAttributeInfo defaultAttribute : typeInfo.getAttributes().values()) {
                 if (!defaultAttribute.isComputed()) {
                     if (!alreadyConstrainedAttributes.contains(defaultAttribute.getRmName())) {

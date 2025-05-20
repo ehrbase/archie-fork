@@ -15,7 +15,7 @@ class RmPrimitiveObjectValidator {
         this.validationHelper = validationHelper;
     }
 
-    public List<RMObjectValidationMessage> validate(List<RMObjectWithPath> rmObjects, String pathSoFar, CPrimitiveObject<?, ?> cobject) {
+    public List<RMObjectValidationMessage> validate(List<RMObjectWithPath> rmObjects, LazyPath pathSoFar, CPrimitiveObject<?, ?> cobject) {
         if(cobject == null) {
             return new ArrayList<>();
         }
@@ -32,7 +32,7 @@ class RmPrimitiveObjectValidator {
         return validate_inner(rmObject, pathSoFar, cobject);
     }
 
-    List<RMObjectValidationMessage> validate_inner(Object rmObject, String pathSoFar, CPrimitiveObject<?, ?> cobject) {
+    List<RMObjectValidationMessage> validate_inner(Object rmObject, LazyPath pathSoFar, CPrimitiveObject<?, ?> cobject) {
         List<RMObjectValidationMessage> result = new ArrayList<>();
         if (!validationHelper.isValidValue(cobject, rmObject)) {
             result.add(createValidationMessage(rmObject, pathSoFar, cobject));
@@ -40,7 +40,7 @@ class RmPrimitiveObjectValidator {
         return result;
     }
 
-    private RMObjectValidationMessage createValidationMessage(Object value, String pathSoFar, CPrimitiveObject<?, ?> cobject) {
+    private RMObjectValidationMessage createValidationMessage(Object value, LazyPath pathSoFar, CPrimitiveObject<?, ?> cobject) {
         List<?> constraint = cobject.getConstraint();
         String message;
 
@@ -52,7 +52,7 @@ class RmPrimitiveObjectValidator {
             message = RMObjectValidationMessageIds.rm_INVALID_FOR_CONSTRAINT_MULTIPLE.getMessage(getValueString(value)) + "\n" +
                     constraintStr;
         }
-        return new RMObjectValidationMessage(cobject, pathSoFar, message);
+        return new RMObjectValidationMessage(cobject, pathSoFar.createPathString(), message);
     }
 
     private String getValueString(Object value) {
