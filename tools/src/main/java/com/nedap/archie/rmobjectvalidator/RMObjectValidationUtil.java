@@ -74,15 +74,4 @@ class RMObjectValidationUtil {
         fakeParent.setRmTypeName(rmTypeName);
         return getDefaultAttributeConstraints(fakeParent, attributes, lookup, constraintImposer);
     }
-
-    public static String stripLastPathSegment(String path) {
-        if (path.equals("/")) {
-            return "";
-        }
-        int lastSlashIndex = path.lastIndexOf('/');
-        if (lastSlashIndex == -1) {
-            return path;
-        }
-        return path.substring(0, lastSlashIndex);
-    }
 }

@@ -108,14 +108,14 @@ public class RMObjectValidator extends RMObjectValidatingProcessor {
     public List<RMObjectValidationMessage> validate(OperationalTemplate template, Object rmObject) {
         clearMessages();
         List<RMObjectWithPath> objects = Collections.singletonList(new RMObjectWithPath(rmObject, ""));
-        addAllMessages(runArchetypeValidations(objects, LazyPath.of(""), template.getDefinition()));
+        addAllMessages(runArchetypeValidations(objects, LazyPath.root(), template.getDefinition()));
         return getMessages();
     }
 
     public List<RMObjectValidationMessage> validate(Object rmObject) {
         clearMessages();
         List<RMObjectWithPath> objects = Collections.singletonList(new RMObjectWithPath(rmObject, "/"));
-        addAllMessages(runArchetypeValidations(objects, LazyPath.of(""), null));
+        addAllMessages(runArchetypeValidations(objects, LazyPath.root(), null));
         return getMessages();
     }
 
@@ -164,8 +164,6 @@ public class RMObjectValidator extends RMObjectValidatingProcessor {
         if (!validateInvariants) {
             return Collections.emptyList();
         }
-        //pathSoFar ends with an attribute, but objectWithPath contains it, so remove that.
-        pathSoFar = pathSoFar.stripLastPathSegment();
         Object rmObject = objectWithPath.getObject();
         if (rmObject != null) {
             List<RMObjectValidationMessage> result = new ArrayList<>();
@@ -176,12 +174,12 @@ public class RMObjectValidator extends RMObjectValidatingProcessor {
                         try {
                             boolean passed = (boolean) invariantMethod.getMethod().invoke(rmObject);
                             if (!passed) {
-                                result.add(new RMObjectValidationMessage(null, pathSoFar.joinPaths(objectWithPath.getPath(), false).createPathString(),
+                                result.add(new RMObjectValidationMessage(null, pathSoFar.addSubpath(objectWithPath).createPathString(),
                                         I18n.t("Invariant {0} failed on type " + typeInfo.getRmName(),invariantMethod.getAnnotation().value()),
                                         RMObjectValidationMessageType.INVARIANT_ERROR));
                             }
                         } catch (IllegalAccessException | InvocationTargetException e) {
-                            result.add(new RMObjectValidationMessage(null, pathSoFar.joinPaths(objectWithPath.getPath(), false).createPathString(),
+                            result.add(new RMObjectValidationMessage(null, pathSoFar.addSubpath(objectWithPath).createPathString(),
                                     I18n.t("Exception {0} invoking invariant {1} on {2}: {3}\n{4}",
                                             e.getCause() == null ? e.getClass().getSimpleName() : e.getCause().getClass().getSimpleName(),
                                             invariantMethod.getAnnotation().value(),
@@ -305,7 +303,7 @@ public class RMObjectValidator extends RMObjectValidatingProcessor {
 
     private void validateCAttributes(List<RMObjectValidationMessage> result, LazyPath path, RMObjectWithPath objectWithPath, Object rmObject, CObject cObject, Iterator<CAttribute> attributeIterator) {
         //the path contains an attribute, but is missing the [idx] part. So strip the attribute, and add the attribute plus the [idx] part.
-        LazyPath pathSoFar = path.stripLastPathSegment().joinPaths(objectWithPath.getPath(), false);
+        LazyPath pathSoFar = path.addSubpath(objectWithPath);
         attributeIterator.forEachRemaining(attribute ->
                 validateAttributes(result, attribute, cObject, rmObject, pathSoFar));
     }
@@ -319,14 +317,14 @@ public class RMObjectValidator extends RMObjectValidatingProcessor {
 
         if (emptyObservationErrors.isEmpty()) {
 
-            addAll(result, rmMultiplicityValidator.validate(attribute, pathSoFar.joinPaths(rmAttributeName, true), attributeValue));
+            addAll(result, rmMultiplicityValidator.validate(attribute, pathSoFar.addSubpath(rmAttributeName), attributeValue));
 
             if(attribute.getChildren() == null || attribute.getChildren().isEmpty()) {
                 //no child CObjects. Cardinality/existence has already been validated. Run default RM validations
                 String query = "/" + rmAttributeName;
                 aPathQuery = queryCache.getApathQuery(query);
                 List<RMObjectWithPath> childRmObjects = aPathQuery.findList(lookup, rmObject);
-                addAll(result, runArchetypeValidations(childRmObjects, pathSoFar.joinPaths(query, false), null));
+                addAll(result, runArchetypeValidations(childRmObjects, pathSoFar.addSubpath(query), null));
             }
             else if (attribute.isSingle()) {
                 validateSingleAttribute(result, attribute, rmObject, pathSoFar);
@@ -336,7 +334,7 @@ public class RMObjectValidator extends RMObjectValidatingProcessor {
                     String query = "/" + rmAttributeName + "[" + childCObject.getNodeId() + "]";
                     aPathQuery = queryCache.getApathQuery(query);
                     List<RMObjectWithPath> childRmObjects = aPathQuery.findList(lookup, rmObject);
-                    addAll(result, runArchetypeValidations(childRmObjects, pathSoFar.joinPaths(query, false), childCObject));
+                    addAll(result, runArchetypeValidations(childRmObjects, pathSoFar.addSubpath(query), childCObject));
                     //TODO: find all other child RM Objects that don't match with a given node id (eg unconstraint in archetype) and
                     //run default validations against them!
                 }
@@ -351,7 +349,7 @@ public class RMObjectValidator extends RMObjectValidatingProcessor {
             String query = "/" + attribute.getRmAttributeName() + "[" + childCObject.getNodeId() + "]";
             RMPathQuery aPathQuery = queryCache.getApathQuery(query);
             List<RMObjectWithPath> childNodes = aPathQuery.findList(lookup, rmObject);
-            List<RMObjectValidationMessage> subResult = runArchetypeValidations(childNodes, pathSoFar.joinPaths(query, false), childCObject);
+            List<RMObjectValidationMessage> subResult = runArchetypeValidations(childNodes, pathSoFar.addSubpath(query), childCObject);
             boolean cObjectWithoutErrorsFound = subResult.isEmpty();
             if (cObjectWithoutErrorsFound) {
                 //a single attribute with multiple CObjects means you can choose which CObject you use
