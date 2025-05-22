@@ -119,8 +119,8 @@ public class RMObjectValidator extends RMObjectValidatingProcessor {
         return getMessages();
     }
 
-    public static <T> void addAll(List<T> target, Collection<T> source) {
-        //prevent that target.elementData is created if source is empty
+    private static <T> void addAll(Collection<T> target, Collection<T> source) {
+        //prevent potential initialization of target data structure if source is empty
         if (!source.isEmpty()) {
             target.addAll(source);
         }
@@ -310,7 +310,8 @@ public class RMObjectValidator extends RMObjectValidatingProcessor {
 
     private void validateAttributes(List<RMObjectValidationMessage> result, CAttribute attribute, CObject cobject, Object rmObject, ValidationPath pathSoFar) {
         String rmAttributeName = attribute.getRmAttributeName();
-        RMPathQuery aPathQuery = queryCache.getApathQuery("/" + attribute.getRmAttributeName());
+        String prefixedAttributeName = "/" + attribute.getRmAttributeName();
+        RMPathQuery aPathQuery = queryCache.getApathQuery(prefixedAttributeName);
         Object attributeValue = aPathQuery.find(lookup, rmObject);
         List<RMObjectValidationMessage> emptyObservationErrors = isObservationEmpty(attribute, rmAttributeName, attributeValue, pathSoFar, cobject);
         addAll(result, emptyObservationErrors);
@@ -321,17 +322,16 @@ public class RMObjectValidator extends RMObjectValidatingProcessor {
 
             if(attribute.getChildren() == null || attribute.getChildren().isEmpty()) {
                 //no child CObjects. Cardinality/existence has already been validated. Run default RM validations
-                String query = "/" + rmAttributeName;
-                aPathQuery = queryCache.getApathQuery(query);
+                aPathQuery = queryCache.getApathQuery(prefixedAttributeName);
                 List<RMObjectWithPath> childRmObjects = aPathQuery.findList(lookup, rmObject);
-                addAll(result, runArchetypeValidations(childRmObjects, pathSoFar.addSubpath(query), null));
+                addAll(result, runArchetypeValidations(childRmObjects, pathSoFar.addSubpath(prefixedAttributeName), null));
             }
             else if (attribute.isSingle()) {
                 validateSingleAttribute(result, attribute, rmObject, pathSoFar);
             } else {
 
                 for (CObject childCObject : attribute.getChildren()) {
-                    String query = "/" + rmAttributeName + "[" + childCObject.getNodeId() + "]";
+                    String query = prefixedAttributeName + '[' + childCObject.getNodeId() + ']';
                     aPathQuery = queryCache.getApathQuery(query);
                     List<RMObjectWithPath> childRmObjects = aPathQuery.findList(lookup, rmObject);
                     addAll(result, runArchetypeValidations(childRmObjects, pathSoFar.addSubpath(query), childCObject));
@@ -383,7 +383,6 @@ public class RMObjectValidator extends RMObjectValidatingProcessor {
      * @param cobject         The constraints that the attribute is checked against
      */
     private List<RMObjectValidationMessage> isObservationEmpty(CAttribute attribute, String rmAttributeName, Object attributeValue, ValidationPath pathSoFar, CObject cobject) {
-        List<RMObjectValidationMessage> result = new ArrayList<>();
         CObject parent = attribute.getParent();
         boolean parentIsEvent = parent != null && parent.getRmTypeName().contains("EVENT");
         boolean attributeIsData = rmAttributeName.equals("data");
@@ -392,8 +391,9 @@ public class RMObjectValidator extends RMObjectValidatingProcessor {
 
         if (parentIsEvent && attributeIsData && attributeIsEmpty && attributeShouldNotBeEmpty) {
             String message = "Observation " + RMObjectValidationUtil.getParentObservationTerm(attribute) + " contains no results";
-            result.add(new RMObjectValidationMessage(cobject == null ? null : cobject.getParent().getParent(), pathSoFar.createPathString(), message, RMObjectValidationMessageType.EMPTY_OBSERVATION));
+            return Collections.singletonList(new RMObjectValidationMessage(cobject == null ? null : cobject.getParent().getParent(), pathSoFar.createPathString(), message, RMObjectValidationMessageType.EMPTY_OBSERVATION));
+        } else {
+            return Collections.emptyList();
         }
-        return result;
     }
 }

@@ -116,12 +116,12 @@ public class RMPathQuery {
      */
     public <T> List<RMObjectWithPath> findList(ModelInfoLookup lookup, Object root) {
         List<RMObjectWithPath> currentObjects = Lists.newArrayList(new RMObjectWithPath(root, "/"));
+        List<RMObjectWithPath> newCurrentObjects = new ArrayList<>();
         try {
             for (PathSegment segment : pathSegments) {
                 if(currentObjects.isEmpty()){
                     return Collections.emptyList();
                 }
-                List<RMObjectWithPath> newCurrentObjects = new ArrayList<>();
 
                 for(int i = 0; i < currentObjects.size(); i++) {
                     RMObjectWithPath currentObject = currentObjects.get(i);
@@ -132,11 +132,6 @@ public class RMPathQuery {
                     }
                     Method method = attributeInfo.getGetMethod();
                     currentRMObject = method.invoke(currentRMObject);
-                    String pathSeparator = "/";
-                    if(currentObject.getPath().endsWith("/")) {
-                        pathSeparator = "";
-                    }
-                    String newPath = currentObject.getPath() + pathSeparator + segment.getNodeName();
 
                     if (currentRMObject == null) {
                         continue;
@@ -145,10 +140,12 @@ public class RMPathQuery {
                     if (currentRMObject instanceof Collection) {
                         Collection<?> collection = (Collection<?>) currentRMObject;
                         if (!segment.hasExpressions()) {
-                            addAllFromCollection(lookup, newCurrentObjects, collection, newPath);
+                            if (!collection.isEmpty()) {
+                                addAllFromCollection(lookup, newCurrentObjects, collection, createPath(currentObject, segment));
+                            }
                         } else {
                             //TODO
-                            newCurrentObjects.addAll(findRMObjectsWithPathCollection(lookup, segment, collection, newPath));
+                            addAll(newCurrentObjects, findRMObjectsWithPathCollection(lookup, segment, collection, createPath(currentObject, segment)));
                         }
                     } else if (archetypeNodeIdFromObject != null) {
 
@@ -170,7 +167,7 @@ public class RMPathQuery {
                                 }
 
                             }
-                            newCurrentObjects.add(createRMObjectWithPath(lookup, currentRMObject, newPath));
+                            newCurrentObjects.add(createRMObjectWithPath(lookup, currentRMObject, createPath(currentObject, segment)));
                         }
                     } else if (segment.hasNumberIndex()) {
                         int number = segment.getIndex();
@@ -181,10 +178,14 @@ public class RMPathQuery {
                         //The object does not have an archetypeNodeId
                         //in openehr, in archetypes everythign has node ids. Datavalues do not in the rm. a bit ugly if you ask
                         //me, but that's why there's no 'if there's a nodeId set, this won't match!' code here.
-                        newCurrentObjects.add(createRMObjectWithPath(lookup, currentRMObject, newPath));
+                        newCurrentObjects.add(createRMObjectWithPath(lookup, currentRMObject, createPath(currentObject, segment)));
                     }
                 }
+                // Flip lists, instead of new instance
+                List<RMObjectWithPath> l = currentObjects;
+                l.clear();
                 currentObjects = newCurrentObjects;
+                newCurrentObjects = l;
             }
             return currentObjects;
         } catch (InvocationTargetException e) {
@@ -193,6 +194,24 @@ public class RMPathQuery {
             throw new RuntimeException(e);
         }
 
+    }
+
+    private static <T> void addAll(Collection<T> target, Collection<T> source) {
+        //prevent potential initialization of target data structure if source is empty
+        if (!source.isEmpty()) {
+            target.addAll(source);
+        }
+    }
+
+    private static String createPath(RMObjectWithPath currentObject, PathSegment segment) {
+        String currentObjectPath = currentObject.getPath();
+        if (currentObjectPath.isEmpty()) {
+            return '/' + segment.getNodeName();
+        } else if (currentObjectPath.charAt(currentObjectPath.length() - 1) == '/') {
+            return currentObjectPath + segment.getNodeName();
+        } else {
+            return currentObjectPath + '/' + segment.getNodeName();
+        }
     }
 
     private RMObjectWithPath createRMObjectWithPath(ModelInfoLookup lookup, Object currentObject, String newPath) {

@@ -45,22 +45,23 @@ class RMObjectValidationUtil {
     }
 
     public static List<CAttribute> getDefaultAttributeConstraints(CObject cObject, List<CAttribute> attributes, ModelInfoLookup lookup, ModelConstraintImposer constraintImposer) {
+        RMTypeInfo typeInfo = lookup.getTypeInfo(cObject.getRmTypeName());
+        if (typeInfo == null) {
+            return Collections.emptyList();
+        }
+
         List<CAttribute> result = new ArrayList<>();
 
-        RMTypeInfo typeInfo = lookup.getTypeInfo(cObject.getRmTypeName());
+        Set<String> alreadyConstrainedAttributes = attributes.isEmpty()
+                ? Collections.emptySet()
+                : attributes.stream().map(CAttribute::getRmAttributeName).collect(Collectors.toSet());
 
-        if(typeInfo != null) {
-            Set<String> alreadyConstrainedAttributes = attributes.isEmpty()
-                    ? Collections.emptySet()
-                    : attributes.stream().map(CAttribute::getRmAttributeName).collect(Collectors.toSet());
-
-            for (RMAttributeInfo defaultAttribute : typeInfo.getAttributes().values()) {
-                if (!defaultAttribute.isComputed()) {
-                    if (!alreadyConstrainedAttributes.contains(defaultAttribute.getRmName())) {
-                        CAttribute attribute = constraintImposer.getDefaultAttribute(cObject.getRmTypeName(), defaultAttribute.getRmName());
-                        attribute.setParent(cObject);
-                        result.add(attribute);
-                    }
+        for (RMAttributeInfo defaultAttribute : typeInfo.getAttributes().values()) {
+            if (!defaultAttribute.isComputed()) {
+                if (!alreadyConstrainedAttributes.contains(defaultAttribute.getRmName())) {
+                    CAttribute attribute = constraintImposer.getDefaultAttribute(cObject.getRmTypeName(), defaultAttribute.getRmName());
+                    attribute.setParent(cObject);
+                    result.add(attribute);
                 }
             }
         }
@@ -69,7 +70,6 @@ class RMObjectValidationUtil {
     }
 
     public static List<CAttribute> getDefaultAttributeConstraints(String rmTypeName, List<CAttribute> attributes, ModelInfoLookup lookup, ModelConstraintImposer constraintImposer) {
-
         CComplexObject fakeParent = new CComplexObject();
         fakeParent.setRmTypeName(rmTypeName);
         return getDefaultAttributeConstraints(fakeParent, attributes, lookup, constraintImposer);
