@@ -31,7 +31,7 @@ public class InvariantUtil {
     public static boolean belongsToTerminologyByOpenEHRId(CodePhrase value, String openEHRId) {
         if(value != null && value.getCodeString() != null) {
             TermCode termCode = OpenEHRTerminologyAccess.getInstance().getTermByOpenEhrId(openEHRId, value.getCodeString(), ENGLISH);
-            return termCode != null && termCode != null &&
+            return termCode != null &&
                     (value.getTerminologyId() == null || value.getTerminologyId().getValue().equalsIgnoreCase(termCode.getTerminologyId()));
         }
         return true;
@@ -40,7 +40,7 @@ public class InvariantUtil {
     public static boolean belongsToTerminologyByGroupId(CodePhrase value, String groupId) {
         if(value != null && value.getCodeString() != null) {
             TermCode termCode = OpenEHRTerminologyAccess.getInstance().getTermByOpenEHRGroup(groupId, ENGLISH, value.getCodeString());
-            return termCode != null && termCode != null &&
+            return termCode != null &&
                     (value.getTerminologyId() == null || value.getTerminologyId().getValue().equalsIgnoreCase(termCode.getTerminologyId()));
         }
         return true;

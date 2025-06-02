@@ -36,7 +36,6 @@ public class ReflectionConstraintImposer implements ModelConstraintImposer {
     private CAttribute createCAttribute(String typeId, String attributeName) {
         CAttribute attribute = new CAttribute();
 
-        attribute.setMultiple(false);
         attribute.setRmAttributeName(attributeName);
 
         boolean nullable = lookup.isNullable(typeId, attributeName);
