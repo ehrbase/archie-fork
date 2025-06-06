@@ -184,7 +184,7 @@ public class OpenEHRTerminologyAccess implements TerminologyAccess {
         if(openehr == null) {
             return Collections.emptyList(); //should never happen
         }
-        return openehr.getAllTermsForLanguage(language).stream()
+        return openehr.streamAllTermsForLanguage(language)
                 .filter(t -> t.getGroupIds().contains(groupId))
                 .collect(Collectors.toList());
     }
