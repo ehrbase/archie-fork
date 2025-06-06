@@ -22,13 +22,7 @@ public class APathQueryCache {
     }
 
     public RMPathQuery getApathQuery(String query) {
-        RMPathQuery result = queryCache.get(query);
-        if (result == null) {
-            result = new RMPathQuery(query, matchSpecialisedNodes);
-            queryCache.put(query, result);
-        }
-        return result;
-
+        return queryCache.computeIfAbsent(query, q -> new RMPathQuery(q, matchSpecialisedNodes));
     }
 
 }
