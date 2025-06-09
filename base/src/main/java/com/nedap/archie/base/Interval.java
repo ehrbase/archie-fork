@@ -64,17 +64,19 @@ public class Interval<T> extends OpenEHRBase {
     public Interval(T lower, T upper, boolean lowerIncluded, boolean upperIncluded) {
         this.lower = lower;
         this.upper = upper;
-        this.lowerIncluded = lowerIncluded;
-        this.upperIncluded = upperIncluded;
 
 		if (upper == null) {
 			this.upperUnbounded = true;
 			this.upperIncluded = false;
-		}
+		} else {
+            this.upperIncluded = upperIncluded;
+        }
 		if (lower == null) {
 			this.lowerUnbounded = true;
 			this.lowerIncluded = false;
-		}
+		} else {
+            this.lowerIncluded = lowerIncluded;
+        }
 
     }
 

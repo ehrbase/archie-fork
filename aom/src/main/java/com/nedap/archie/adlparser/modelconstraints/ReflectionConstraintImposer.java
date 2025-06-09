@@ -34,9 +34,7 @@ public class ReflectionConstraintImposer implements ModelConstraintImposer {
     }
 
     private CAttribute createCAttribute(String typeId, String attributeName) {
-        CAttribute attribute = new CAttribute();
-
-        attribute.setRmAttributeName(attributeName);
+        CAttribute attribute = new CAttribute(attributeName);
 
         boolean nullable = lookup.isNullable(typeId, attributeName);
         if(nullable) {
@@ -53,10 +51,6 @@ public class ReflectionConstraintImposer implements ModelConstraintImposer {
             }
 
             attribute.setMultiple(true);
-        } else {
-            //only for container attributes (list, set, etc)
-            attribute.setCardinality(null);
-            attribute.setMultiple(false);
         }
         return attribute;
     }
