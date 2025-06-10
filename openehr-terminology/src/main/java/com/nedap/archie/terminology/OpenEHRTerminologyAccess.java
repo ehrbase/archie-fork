@@ -1,9 +1,12 @@
 package com.nedap.archie.terminology;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.nedap.archie.terminology.openehr.*;
 
+import java.util.AbstractMap;
+import java.util.Objects;
 import javax.xml.bind.JAXBContext;
 import javax.xml.bind.JAXBException;
 import javax.xml.bind.Unmarshaller;
@@ -30,6 +33,9 @@ public class OpenEHRTerminologyAccess implements TerminologyAccess {
     @JsonProperty
     private Map<String, TerminologyImpl> terminologiesByExternalId = new LinkedHashMap<>();
 
+    @JsonIgnore
+    private Map<GroupLanguageCode, TermCode> termCodeByGroupLanguageCode;
+
     private static final String[] resourceNames = {
             "/openEHR_RM/en/openehr_terminology.xml",
             "/openEHR_RM/es/openehr_terminology.xml",
@@ -37,8 +43,6 @@ public class OpenEHRTerminologyAccess implements TerminologyAccess {
             "/openEHR_RM/pt/openehr_terminology.xml",
             "/openEHR_RM/openehr_external_terminologies.xml",
     };
-
-
 
     private OpenEHRTerminologyAccess() {
 
@@ -100,7 +104,6 @@ public class OpenEHRTerminologyAccess implements TerminologyAccess {
         return instance;
     }
 
-
     private static synchronized void createInstance(boolean fromJson) {
         if (instance == null) {
             OpenEHRTerminologyAccess newInstance;
@@ -110,11 +113,29 @@ public class OpenEHRTerminologyAccess implements TerminologyAccess {
                 newInstance = new OpenEHRTerminologyAccess();
                 newInstance.parseFromXml();
             }
+
+            newInstance.prepareCache();
             instance = newInstance;
         }
     }
 
+    private void prepareCache() {
+        TerminologyImpl openehr = this.terminologiesByExternalId.get("openehr");
+        if (openehr == null) {
+            this.termCodeByGroupLanguageCode = Collections.emptyMap();
 
+        } else {
+            this.termCodeByGroupLanguageCode = openehr.getTermsById().values().stream()
+                    //<<lang, TC>,MLT>
+                    .flatMap(a -> a.getTermCodesByLanguage().entrySet().stream().map(e -> new AbstractMap.SimpleImmutableEntry<>(e, a)))
+                    //<Group,<<Lang, TC>,MLT>>
+                    .flatMap(t -> t.getKey().getValue().getGroupIds().stream().map(g -> new AbstractMap.SimpleImmutableEntry<>(g, t)))
+                    .collect(Collectors.groupingBy(e ->  new GroupLanguageCode(e.getKey(), e.getValue().getKey().getKey(), e.getValue().getKey().getValue().getCodeString()),
+                            Collectors.mapping(e -> e.getValue().getKey().getValue(),
+                                    Collectors.reducing(null, (a, b) -> b))
+                    ));
+        }
+    }
 
     @Override
     public TermCode getTerm(String terminologyId, String code, String language) {
@@ -193,15 +214,36 @@ public class OpenEHRTerminologyAccess implements TerminologyAccess {
 
     @Override
     public TermCode getTermByOpenEHRGroup(String groupId, String language, String code) {
-        //TODO: improve performance with a nice index
-        TerminologyImpl openehr = terminologiesByExternalId.get("openehr");
-        if(openehr == null) {
-            return null; //should never happen
+        return termCodeByGroupLanguageCode.get(new GroupLanguageCode(groupId, language, code));
+    }
+
+    private static final class GroupLanguageCode {
+        private final String group;
+        private final String lang;
+        private final String code;
+        private final int hash;
+
+        public GroupLanguageCode(String group, String lang, String code) {
+            this.group = group;
+            this.lang = lang;
+            this.code = code;
+            this.hash = Objects.hash(group, lang, code);
         }
-        List<TermCode> codes = openehr.getAllTermsForLanguage(language).stream()
-                .filter(t -> t.getGroupIds().contains(groupId))
-                .collect(Collectors.toList());
-        return codes.stream().filter(c -> c.getCodeString().equalsIgnoreCase(code)).findFirst().orElse(null);
+
+        @Override
+        public boolean equals(Object o) {
+            if (o == null || getClass() != o.getClass()) return false;
+            GroupLanguageCode lgcKey = (GroupLanguageCode) o;
+            return Objects.equals(hash, lgcKey.hash)
+                    && Objects.equals(code, lgcKey.code)
+                    && Objects.equals(group, lgcKey.group)
+                    && Objects.equals(lang, lgcKey.lang);
+        }
+
+        @Override
+        public int hashCode() {
+            return hash;
+        }
     }
 }
 
