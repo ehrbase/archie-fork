@@ -2,9 +2,9 @@ package com.nedap.archie.rmobjectvalidator;
 
 import com.nedap.archie.aom.CPrimitiveObject;
 import com.nedap.archie.query.RMObjectWithPath;
+import java.util.ArrayList;
 import org.openehr.utils.message.I18n;
 
-import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 
@@ -15,7 +15,7 @@ class RmPrimitiveObjectValidator {
         this.validationHelper = validationHelper;
     }
 
-    public List<RMObjectValidationMessage> validate(List<RMObjectWithPath> rmObjects, String pathSoFar, CPrimitiveObject<?, ?> cobject) {
+    public List<RMObjectValidationMessage> validate(List<RMObjectWithPath> rmObjects, ValidationPath pathSoFar, CPrimitiveObject<?, ?> cobject) {
         if(cobject == null) {
             return new ArrayList<>();
         }
@@ -25,17 +25,17 @@ class RmPrimitiveObjectValidator {
         }
         if (rmObjects.size() != 1) {
             List<RMObjectValidationMessage> result = new ArrayList<>();
-            result.add(createValidationMessage(rmObjects, pathSoFar, cobject));
+            result.add(createValidationMessage(rmObjects, pathSoFar.toString(), cobject));
             return result;
         }
         Object rmObject = rmObjects.get(0).getObject();
         return validate_inner(rmObject, pathSoFar, cobject);
     }
 
-    List<RMObjectValidationMessage> validate_inner(Object rmObject, String pathSoFar, CPrimitiveObject<?, ?> cobject) {
+    List<RMObjectValidationMessage> validate_inner(Object rmObject, ValidationPath pathSoFar, CPrimitiveObject<?, ?> cobject) {
         List<RMObjectValidationMessage> result = new ArrayList<>();
         if (!validationHelper.isValidValue(cobject, rmObject)) {
-            result.add(createValidationMessage(rmObject, pathSoFar, cobject));
+            result.add(createValidationMessage(rmObject, pathSoFar.toString(), cobject));
         }
         return result;
     }
