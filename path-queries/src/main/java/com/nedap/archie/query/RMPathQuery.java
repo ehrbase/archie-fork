@@ -28,7 +28,7 @@ import java.util.List;
 public class RMPathQuery {
     private static final Logger logger = LoggerFactory.getLogger(RMPathQuery.class);
 
-    private List<PathSegment> pathSegments = new ArrayList<>();
+    private final List<PathSegment> pathSegments;
     private final boolean matchSpecialisedNodes;
 
     public RMPathQuery(String query) {
@@ -105,75 +105,76 @@ public class RMPathQuery {
     /**
      * You will want to use RMQueryContext in many cases. For perforamnce reasons, this could still be useful
      */
-    public <T> List<RMObjectWithPath> findList(ModelInfoLookup lookup, Object root) {
+    public List<RMObjectWithPath> findList(ModelInfoLookup lookup, Object root) {
         AttributeAccessor attributeAccessor = new AttributeAccessor(lookup);
         List<RMObjectWithPath> currentObjects = Lists.newArrayList(new RMObjectWithPath(root, "/"));
+        List<RMObjectWithPath> newCurrentObjects = new ArrayList<>();
         for (PathSegment segment : pathSegments) {
-            if(currentObjects.isEmpty()){
-                return Collections.emptyList();
-            }
-            List<RMObjectWithPath> newCurrentObjects = new ArrayList<>();
-
-            for(int i = 0; i < currentObjects.size(); i++) {
-                RMObjectWithPath currentObject = currentObjects.get(i);
+            for (RMObjectWithPath currentObject : currentObjects) {
                 Object currentRMObject = currentObject.getObject();
                 if (!attributeAccessor.hasAttribute(currentRMObject, segment.getNodeName())) {
                     continue;
                 }
                 currentRMObject = attributeAccessor.getValue(currentRMObject, segment.getNodeName());
-                String pathSeparator = "/";
-                if(currentObject.getPath().endsWith("/")) {
-                    pathSeparator = "";
-                }
-                String newPath = currentObject.getPath() + pathSeparator + segment.getNodeName();
-
                 if (currentRMObject == null) {
                     continue;
                 }
-                String archetypeNodeIdFromObject = lookup.getArchetypeNodeIdFromRMObject(currentObject);
+
+                String newPath;
+                if (currentObject.getPath().endsWith("/")) {
+                    newPath = currentObject.getPath() + segment.getNodeName();
+                } else {
+                    newPath = currentObject.getPath() + "/" + segment.getNodeName();
+                }
+
                 if (currentRMObject instanceof Collection) {
                     Collection<?> collection = (Collection<?>) currentRMObject;
                     if (!segment.hasExpressions()) {
                         addAllFromCollection(lookup, newCurrentObjects, collection, newPath);
                     } else {
                         //TODO
-                        newCurrentObjects.addAll(findRMObjectsWithPathCollection(lookup, segment, collection, newPath));
-                    }
-                } else if (archetypeNodeIdFromObject != null) {
-
-                    if (segment.hasExpressions()) {
-                        if (segment.hasIdCode()) {
-                            if (!archetypeNodeIdFromObject.equals(segment.getNodeId())) {
-                                continue;
-                            }
-                        } else if (segment.hasNumberIndex()) {
-                            int number = segment.getIndex();
-                            if (number != 1) {
-                                continue;
-                            }
-                        } else if (segment.hasArchetypeRef()) {
-                            //operational templates in RM Objects have their archetype node ID set to an archetype ref. That
-                            //we support. Other things not so much
-                            if (!archetypeNodeIdFromObject.equals(segment.getNodeId())) {
-                                continue;
-                            }
-
-                        }
-                        newCurrentObjects.add(createRMObjectWithPath(lookup, currentRMObject, newPath));
-                    }
-                } else if (segment.hasNumberIndex()) {
-                    int number = segment.getIndex();
-                    if (number != 1) {
-                        continue;
+                        addRMObjectsWithPathCollection(lookup, segment, collection, newPath, newCurrentObjects);
                     }
                 } else {
-                    //The object does not have an archetypeNodeId
-                    //in openehr, in archetypes everythign has node ids. Datavalues do not in the rm. a bit ugly if you ask
-                    //me, but that's why there's no 'if there's a nodeId set, this won't match!' code here.
-                    newCurrentObjects.add(createRMObjectWithPath(lookup, currentRMObject, newPath));
+                    String archetypeNodeIdFromObject = lookup.getArchetypeNodeIdFromRMObject(currentObject);
+                    if (archetypeNodeIdFromObject != null) {
+
+                        if (segment.hasExpressions()) {
+                            if (segment.hasIdCode()) {
+                                if (!archetypeNodeIdFromObject.equals(segment.getNodeId())) {
+                                    continue;
+                                }
+                            } else if (segment.hasNumberIndex()) {
+                                int number = segment.getIndex();
+                                if (number != 1) {
+                                    continue;
+                                }
+                            } else if (segment.hasArchetypeRef()) {
+                                //operational templates in RM Objects have their archetype node ID set to an archetype ref. That
+                                //we support. Other things not so much
+                                if (!archetypeNodeIdFromObject.equals(segment.getNodeId())) {
+                                    continue;
+                                }
+
+                            }
+                            newCurrentObjects.add(createRMObjectWithPath(lookup, currentRMObject, newPath));
+                        }
+                    } else if (!segment.hasNumberIndex()) {
+                        //The object does not have an archetypeNodeId
+                        //in openehr, in archetypes everything has node ids. Datavalues do not in the rm. a bit ugly if you ask
+                        //me, but that's why there's no 'if there's a nodeId set, this won't match!' code here.
+                        newCurrentObjects.add(createRMObjectWithPath(lookup, currentRMObject, newPath));
+                    }
                 }
             }
+            if(newCurrentObjects.isEmpty()){
+                return Collections.emptyList();
+            }
+            // swap lists
+            List<RMObjectWithPath> t = currentObjects;
             currentObjects = newCurrentObjects;
+            t.clear();
+            newCurrentObjects = t;
         }
         return currentObjects;
 
@@ -230,7 +231,7 @@ public class RMPathQuery {
         return archetypeNodeId != null && !archetypeNodeId.equals(AdlCodeDefinitions.PRIMITIVE_NODE_ID);
     }
 
-    private Collection<RMObjectWithPath> findRMObjectsWithPathCollection(ModelInfoLookup lookup, PathSegment segment, Collection<?> collection, String path) {
+    private void addRMObjectsWithPathCollection(ModelInfoLookup lookup, PathSegment segment, Collection<?> collection, String path, List<RMObjectWithPath> result) {
 
         if(segment.hasNumberIndex()) {
             int number = segment.getIndex();
@@ -238,12 +239,11 @@ public class RMPathQuery {
             for(Object object:collection) {
                 if(number == i) {
                     //TODO: check for other constraints as well
-                    return Lists.newArrayList(new RMObjectWithPath(object, path + buildPathConstraint(i, lookup.getArchetypeNodeIdFromRMObject(object))));
+                    result.add(new RMObjectWithPath(object, path + buildPathConstraint(i, lookup.getArchetypeNodeIdFromRMObject(object))));
                 }
                 i++;
             }
         }
-        List<RMObjectWithPath> result = new ArrayList<>();
         int i = 1;
         for(Object object:collection) {
             String archetypeNodeId = lookup.getArchetypeNodeIdFromRMObject(object);
@@ -273,7 +273,6 @@ public class RMPathQuery {
             }
             i++;
         }
-        return result;
     }
 
     private Object findRMObject(ModelInfoLookup lookup, PathSegment segment, Collection<?> collection) {
