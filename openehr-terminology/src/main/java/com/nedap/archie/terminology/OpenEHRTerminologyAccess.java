@@ -184,7 +184,7 @@ public class OpenEHRTerminologyAccess implements TerminologyAccess {
         if(openehr == null) {
             return Collections.emptyList(); //should never happen
         }
-        return openehr.getAllTermsForLanguage(language).stream()
+        return openehr.streamAllTermsForLanguage(language)
                 .filter(t -> t.getGroupIds().contains(groupId))
                 .collect(Collectors.toList());
     }
@@ -196,10 +196,10 @@ public class OpenEHRTerminologyAccess implements TerminologyAccess {
         if(openehr == null) {
             return null; //should never happen
         }
-        List<TermCode> codes = openehr.getAllTermsForLanguage(language).stream()
+        return openehr.streamAllTermsForLanguage(language)
                 .filter(t -> t.getGroupIds().contains(groupId))
-                .collect(Collectors.toList());
-        return codes.stream().filter(c -> c.getCodeString().equalsIgnoreCase(code)).findFirst().orElse(null);
+                .filter(c -> c.getCodeString().equalsIgnoreCase(code))
+                .findFirst().orElse(null);
     }
 }
 
