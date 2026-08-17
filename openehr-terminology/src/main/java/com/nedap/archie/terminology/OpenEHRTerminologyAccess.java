@@ -103,12 +103,14 @@ public class OpenEHRTerminologyAccess implements TerminologyAccess {
 
     private static synchronized void createInstance(boolean fromJson) {
         if(instance == null) {
+            OpenEHRTerminologyAccess newInstance;
             if(fromJson) {
-                instance = parseFromJson();
+                newInstance = parseFromJson();
             } else {
-                instance = new OpenEHRTerminologyAccess();
-                instance.parseFromXml();
+                newInstance = new OpenEHRTerminologyAccess();
+                newInstance.parseFromXml();
             }
+            instance = newInstance;
         }
     }
 
