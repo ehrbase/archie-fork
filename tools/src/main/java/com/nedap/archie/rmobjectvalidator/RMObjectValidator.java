@@ -282,31 +282,29 @@ public class RMObjectValidator extends RMObjectValidatingProcessor {
 
     private void validateAttributes(ValidationMessages result, CAttribute attribute, CObject cobject, Object rmObject, ValidationPath pathSoFar) {
         String rmAttributeName = attribute.getRmAttributeName();
-        RMPathQuery aPathQuery = queryCache.getApathQuery("/" + attribute.getRmAttributeName());
+        RMPathQuery aPathQuery = queryCache.getForAttribute(rmAttributeName);
         Object attributeValue = aPathQuery.find(lookup, rmObject);
         RMObjectValidationMessage emptyObservationError = isObservationEmpty(attribute, rmAttributeName, attributeValue, pathSoFar, cobject);
         if (emptyObservationError != null) {
             result.add(emptyObservationError);
 
         } else {
-            rmMultiplicityValidator.validate(result, attribute, pathSoFar.joinPathsWithSeparator(rmAttributeName), attributeValue);
+            ValidationPath attributePath = pathSoFar.add(rmAttributeName);
+            rmMultiplicityValidator.validate(result, attribute, attributePath, attributeValue);
 
             if (attribute.getChildren() == null || attribute.getChildren().isEmpty()) {
                 //no child CObjects. Cardinality/existence has already been validated. Run default RM validations
-                String query = "/" + rmAttributeName;
-                aPathQuery = queryCache.getApathQuery(query);
                 List<RMObjectWithPath> childRmObjects = aPathQuery.findList(lookup, rmObject);
-                runArchetypeValidations(result, childRmObjects, pathSoFar.joinPaths(query), null);
+                runArchetypeValidations(result, childRmObjects, attributePath, null);
             }
             else if (attribute.isSingle()) {
                 validateSingleAttribute(result, attribute, rmObject, pathSoFar);
             } else {
 
                 for (CObject childCObject : attribute.getChildren()) {
-                    String query = "/" + rmAttributeName + "[" + childCObject.getNodeId() + "]";
-                    aPathQuery = queryCache.getApathQuery(query);
+                    aPathQuery = queryCache.getForAttribute(rmAttributeName, childCObject.getNodeId());
                     List<RMObjectWithPath> childRmObjects = aPathQuery.findList(lookup, rmObject);
-                     runArchetypeValidations(result, childRmObjects, pathSoFar.joinPaths(query), childCObject);
+                     runArchetypeValidations(result, childRmObjects, pathSoFar.add(rmAttributeName, childCObject), childCObject);
                     //TODO: find all other child RM Objects that don't match with a given node id (eg unconstraint in archetype) and
                     //run default validations against them!
                 }
@@ -320,10 +318,9 @@ public class RMObjectValidator extends RMObjectValidatingProcessor {
         final ValidationMessages currentMessages = new ValidationMessages();
 
         for (CObject childCObject : attribute.getChildren()) {
-            String query = "/" + attribute.getRmAttributeName() + "[" + childCObject.getNodeId() + "]";
-            RMPathQuery aPathQuery = queryCache.getApathQuery(query);
+            RMPathQuery aPathQuery = queryCache.getForAttribute(attribute.getRmAttributeName(),  childCObject.getNodeId());
             List<RMObjectWithPath> childNodes = aPathQuery.findList(lookup, rmObject);
-            runArchetypeValidations(currentMessages, childNodes, pathSoFar.joinPaths(query), childCObject);
+            runArchetypeValidations(currentMessages, childNodes, pathSoFar.add( attribute.getRmAttributeName(), childCObject), childCObject);
             if (currentMessages.isEmpty()) {
                 //a single attribute with multiple CObjects means you can choose which CObject you use
                 //for example, a data value can be a string or an integer.
