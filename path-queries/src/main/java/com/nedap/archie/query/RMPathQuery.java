@@ -1,7 +1,6 @@
 package com.nedap.archie.query;
 
 
-import com.google.common.collect.Lists;
 import com.nedap.archie.aom.utils.AOMUtils;
 import com.nedap.archie.definitions.AdlCodeDefinitions;
 import com.nedap.archie.paths.PathSegment;
@@ -46,7 +45,9 @@ public class RMPathQuery {
     public <T> T find(ModelInfoLookup lookup, Object root) {
         AttributeAccessor attributeAccessor = new AttributeAccessor(lookup);
         Object currentObject = root;
-        for (PathSegment segment : pathSegments) {
+        // performance-relevant simple for-loop
+        for (int i = 0, n = pathSegments.size(); i < n; i++) {
+            PathSegment segment = pathSegments.get(i);
             if (currentObject == null) {
                 return null;
             }
@@ -95,7 +96,7 @@ public class RMPathQuery {
                 }
             } else {
                 //not a locatable, but that's fine
-                //in openehr, in archetypes everythign has node ids. Datavalues do not in the rm. a bit ugly if you ask
+                //in openehr, in archetypes everything has node ids. Datavalues do not in the rm. a bit ugly if you ask
                 //me, but that's why there's no 'if there's a nodeId set, this won't match!' code here.
             }
         }
@@ -103,14 +104,18 @@ public class RMPathQuery {
     }
 
     /**
-     * You will want to use RMQueryContext in many cases. For perforamnce reasons, this could still be useful
+     * You will want to use RMQueryContext in many cases. For performance reasons, this could still be useful
      */
     public List<RMObjectWithPath> findList(ModelInfoLookup lookup, Object root) {
         AttributeAccessor attributeAccessor = new AttributeAccessor(lookup);
-        List<RMObjectWithPath> currentObjects = Lists.newArrayList(new RMObjectWithPath(root, "/"));
-        List<RMObjectWithPath> newCurrentObjects = new ArrayList<>();
-        for (PathSegment segment : pathSegments) {
-            for (RMObjectWithPath currentObject : currentObjects) {
+        List<RMObjectWithPath> currentObjects = new ArrayList<>(1);
+        currentObjects.add(new RMObjectWithPath(root, "/"));
+        List<RMObjectWithPath> newCurrentObjects = new ArrayList<>(0);
+        // performance-relevant simple for-loops
+        for (int i = 0, m = pathSegments.size(); i < m; i++) {
+            PathSegment segment = pathSegments.get(i);
+            for (int j = 0, n = currentObjects.size(); j < n; j++) {
+                RMObjectWithPath currentObject = currentObjects.get(j);
                 Object currentRMObject = currentObject.getObject();
                 if (!attributeAccessor.hasAttribute(currentRMObject, segment.getNodeName())) {
                     continue;

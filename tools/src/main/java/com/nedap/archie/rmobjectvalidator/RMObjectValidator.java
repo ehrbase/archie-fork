@@ -119,12 +119,17 @@ public class RMObjectValidator extends RMObjectValidatingProcessor {
             return;
         }
 
-        for (RMObjectWithPath objectWithPath : rmObjects) {
+        // performance-relevant simple for-loop
+        int n = rmObjects.size();
+        for (int i = 0; i < n; i++) {
+            RMObjectWithPath objectWithPath = rmObjects.get(i);
             validateInvariants(result, objectWithPath, path);
         }
         if(cobject == null) {
             //add default validations
-            for (RMObjectWithPath objectWithPath : rmObjects) {
+            // performance-relevant simple for-loop
+            for (int i = 0; i < n; i++) {
+                RMObjectWithPath objectWithPath = rmObjects.get(i);
                 validateUnconstrainedObjectWithPath(result, path, objectWithPath);
             }
         }
@@ -161,7 +166,10 @@ public class RMObjectValidator extends RMObjectValidatingProcessor {
         }
         pathSoFar = pathSoFar.stripLastPathSegment();
 
-        for (InvariantMethod invariantMethod : typeInfo.getInvariants()) {
+        List<InvariantMethod> invariants = typeInfo.getInvariants();
+        // performance-relevant simple for-loop
+        for (int i = 0, invariantsSize = invariants.size(); i < invariantsSize; i++) {
+            InvariantMethod invariantMethod = invariants.get(i);
             if (!invariantMethod.getAnnotation().ignored()) {
                 try {
                     boolean passed = (boolean) invariantMethod.getMethod().invoke(rmObject);
