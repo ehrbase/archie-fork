@@ -187,8 +187,8 @@ public class RMPathQuery {
 
     private RMObjectWithPath createRMObjectWithPath(ModelInfoLookup lookup, Object currentObject, String newPath) {
         String archetypeNodeId = lookup.getArchetypeNodeIdFromRMObject(currentObject);
-        String pathConstraint = buildPathConstraint(null, archetypeNodeId);
-        return new RMObjectWithPath(currentObject, newPath + pathConstraint);
+        String path = addPathConstraint(newPath, null, archetypeNodeId);
+        return new RMObjectWithPath(currentObject, path);
     }
 
 
@@ -202,34 +202,24 @@ public class RMPathQuery {
     private void addAllFromCollection(ModelInfoLookup lookup, List<RMObjectWithPath> newCurrentObjects, Collection<?> toAdd, String basePath) {
         int index = 1;
         for(Object object:toAdd) {
-            String constraint = buildPathConstraint(index, lookup.getArchetypeNodeIdFromRMObject(object));
-            newCurrentObjects.add(new RMObjectWithPath(object, basePath + constraint));
+            String path = addPathConstraint(basePath, index, lookup.getArchetypeNodeIdFromRMObject(object));
+            newCurrentObjects.add(new RMObjectWithPath(object, path));
             index++;
         }
     }
 
-    private String buildPathConstraint(Integer index, String archetypeNodeId) {
-        if(index == null && !archetypeNodeIdPresent(archetypeNodeId)) {
-            return "";//nothing to add
-        }
-        if(archetypeNodeIdPresent(archetypeNodeId) && index == null) {
-            return "[" + archetypeNodeId + "]";
-        }
-        StringBuilder constraint = new StringBuilder("[");
-        boolean first = true;
-        if(archetypeNodeIdPresent(archetypeNodeId)) {
-            constraint.append(archetypeNodeId);
-            first = false;
-        }
-        if(index != null) {
-            if(!first) {
-                constraint.append(", ");
+    private String addPathConstraint(String path, Integer index, String archetypeNodeId) {
+        if (index == null) {
+            if (archetypeNodeIdPresent(archetypeNodeId)) {
+                return path + "[" + archetypeNodeId + "]";
+            } else {
+                return path; //nothing to add
             }
-            constraint.append(Integer.toString(index));
+        } else if (archetypeNodeIdPresent(archetypeNodeId)) {
+            return path + "[" + archetypeNodeId + ", " + index + "]";
+        } else {
+            return path + "[" + index + "]";
         }
-
-        constraint.append("]");
-        return constraint.toString();
     }
 
     private boolean archetypeNodeIdPresent(String archetypeNodeId) {
@@ -244,7 +234,8 @@ public class RMPathQuery {
             for(Object object:collection) {
                 if(number == i) {
                     //TODO: check for other constraints as well
-                    result.add(new RMObjectWithPath(object, path + buildPathConstraint(i, lookup.getArchetypeNodeIdFromRMObject(object))));
+                    result.add(new RMObjectWithPath(object, addPathConstraint(path, i, lookup.getArchetypeNodeIdFromRMObject(object))));
+                    return;
                 }
                 i++;
             }
@@ -256,11 +247,11 @@ public class RMPathQuery {
             if (segment.hasIdCode()) {
                 if (matchSpecialisedNodes) {
                     if (AOMUtils.codesConformant(archetypeNodeId, segment.getNodeId())) {
-                        result.add(new RMObjectWithPath(object, path + buildPathConstraint(i, archetypeNodeId)));
+                        result.add(new RMObjectWithPath(object, addPathConstraint(path, i, archetypeNodeId)));
                     }
                 } else {
                     if (segment.getNodeId().equals(archetypeNodeId)) {
-                        result.add(new RMObjectWithPath(object, path + buildPathConstraint(i, archetypeNodeId)));
+                        result.add(new RMObjectWithPath(object, addPathConstraint(path, i, archetypeNodeId)));
                     }
                 }
 
@@ -268,12 +259,12 @@ public class RMPathQuery {
                 //operational templates in RM Objects have their archetype node ID set to an archetype ref. That
                 //we support. Other things not so much
                 if (segment.getNodeId().equals(archetypeNodeId)) {
-                    result.add(new RMObjectWithPath(object, path + buildPathConstraint(i, archetypeNodeId)));
+                    result.add(new RMObjectWithPath(object, addPathConstraint(path, i, archetypeNodeId)));
                 }
             } else {
                 if(equalsName(lookup.getNameFromRMObject(object), segment.getNodeId())) {
                     logger.warn("Deprecation: Matching on object name is deprecated and will be removed. Use node id instead.");
-                    result.add(new RMObjectWithPath(object, path + buildPathConstraint(i, archetypeNodeId)));
+                    result.add(new RMObjectWithPath(object, addPathConstraint(path, i, archetypeNodeId)));
                 }
             }
             i++;
