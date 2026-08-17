@@ -30,7 +30,7 @@ public class RMObjectValidator extends RMObjectValidatingProcessor {
 
     private final MetaModel metaModel;
     private final OperationalTemplateProvider operationalTemplateProvider;
-    private final APathQueryCache queryCache = new APathQueryCache();
+    private final APathQueryCache queryCache;
     private final ModelInfoLookup lookup;
     private final ReflectionConstraintImposer constraintImposer;
     private final ValidationConfiguration validationConfiguration;
@@ -64,6 +64,7 @@ public class RMObjectValidator extends RMObjectValidatingProcessor {
         rmPrimitiveObjectValidator = new RmPrimitiveObjectValidator(validationHelper);
         rmTupleValidator = new RmTupleValidator(this.lookup, validationHelper, rmPrimitiveObjectValidator);
         rmMultiplicityValidator = new RmMultiplicityValidator();
+        this.queryCache = new APathQueryCache();
     }
 
     /**
@@ -72,6 +73,15 @@ public class RMObjectValidator extends RMObjectValidatingProcessor {
      * The OperationalTemplateProvider is used to retrieve other referenced archetypes in case of ArchetypeSlots.
      */
     public RMObjectValidator(ModelInfoLookup lookup, OperationalTemplateProvider provider, ValidationConfiguration validationConfiguration) {
+        this(lookup, provider, validationConfiguration, new APathQueryCache());
+    }
+
+    /**
+     * Creates an RM Object Validator with the given ModelInfoLook class, and the given OperationalTemplateProvider
+     * The ModelInfoLookup is used for model access, and model specific constructions.
+     * The OperationalTemplateProvider is used to retrieve other referenced archetypes in case of ArchetypeSlots.
+     */
+    public RMObjectValidator(ModelInfoLookup lookup, OperationalTemplateProvider provider, ValidationConfiguration validationConfiguration, APathQueryCache queryCache) {
         this.lookup = lookup;
         this.metaModel = new MetaModel(lookup, null);
         constraintImposer = new ReflectionConstraintImposer(lookup);
@@ -84,6 +94,7 @@ public class RMObjectValidator extends RMObjectValidatingProcessor {
         rmPrimitiveObjectValidator = new RmPrimitiveObjectValidator(validationHelper);
         rmTupleValidator = new RmTupleValidator(this.lookup, validationHelper, rmPrimitiveObjectValidator);
         rmMultiplicityValidator = new RmMultiplicityValidator();
+        this.queryCache = queryCache;
     }
 
     /**
