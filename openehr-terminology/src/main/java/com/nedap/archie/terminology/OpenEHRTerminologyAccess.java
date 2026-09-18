@@ -238,7 +238,7 @@ public class OpenEHRTerminologyAccess implements TerminologyAccess {
         public boolean equals(Object o) {
             if (o == null || getClass() != o.getClass()) return false;
             GroupLanguageCode lgcKey = (GroupLanguageCode) o;
-            return Objects.equals(hash, lgcKey.hash)
+            return hash == lgcKey.hash
                     && Objects.equals(code, lgcKey.code)
                     && Objects.equals(group, lgcKey.group)
                     && Objects.equals(lang, lgcKey.lang);
