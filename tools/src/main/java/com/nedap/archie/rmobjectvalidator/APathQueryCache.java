@@ -31,7 +31,7 @@ public class APathQueryCache {
     }
 
     public RMPathQuery getForAttribute(String attributeName, String nodeId) {
-        return getApathQuery('/'  +attributeName + '[' + nodeId + ']');
+        return getApathQuery('/' + attributeName + '[' + nodeId + ']');
     }
 
 }
