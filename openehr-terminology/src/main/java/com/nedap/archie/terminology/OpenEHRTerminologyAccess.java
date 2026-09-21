@@ -124,8 +124,7 @@ public class OpenEHRTerminologyAccess implements TerminologyAccess {
     private void prepareCache() {
         TerminologyImpl openehr = this.terminologiesByExternalId.get("openehr");
         if (openehr == null) {
-            //should never happen
-            this.termCodeByGroupLanguageCode = Collections.emptyMap();
+            throw new IllegalStateException("Terminology 'openehr' not found");
 
         } else {
             this.termCodeByGroupLanguageCode = openehr.getTermsById().values().stream()
@@ -208,7 +207,7 @@ public class OpenEHRTerminologyAccess implements TerminologyAccess {
         //TODO: improve performance with a nice index
         TerminologyImpl openehr = terminologiesByExternalId.get("openehr");
         if(openehr == null) {
-            return Collections.emptyList(); //should never happen
+            throw new IllegalStateException("Terminology 'openehr' not found");
         }
         return openehr.streamAllTermsForLanguage(language)
                 .filter(t -> t.getGroupIds().contains(groupId))
