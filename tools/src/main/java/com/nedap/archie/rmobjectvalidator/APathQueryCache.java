@@ -27,7 +27,7 @@ public class APathQueryCache {
     }
 
     public RMPathQuery getForAttribute(String attributeName) {
-        return attributeCache.computeIfAbsent(attributeName, att -> new RMPathQuery('/'  +att, matchSpecialisedNodes));
+        return attributeCache.computeIfAbsent(attributeName, att -> new RMPathQuery('/' + att, matchSpecialisedNodes));
     }
 
     public RMPathQuery getForAttribute(String attributeName, String nodeId) {
