@@ -13,9 +13,6 @@ abstract class ValidationPath {
             return "";
         }
     };
-    static ValidationPath of(String path) {
-        return new SimplePath(null, path, null);
-    }
 
     private ValidationPath() {
         //NOOP
@@ -25,11 +22,11 @@ abstract class ValidationPath {
     public abstract String toString();
 
     ValidationPath add(String rmAttributeName) {
-        return new SimplePath(this, rmAttributeName, null);
+        return new NodeSegmentAppend(this, rmAttributeName, null);
     }
 
     ValidationPath add(String attributeName, CObject cObject) {
-        return new SimplePath(this, attributeName, cObject.getNodeId());
+        return new NodeSegmentAppend(this, attributeName, cObject.getNodeId());
     }
 
     ValidationPath joinPaths(String other) {
@@ -40,63 +37,63 @@ abstract class ValidationPath {
         return new StripLastPathSegment(this);
     }
 
-    private static final class SimplePath extends ValidationPath {
+    private static final class NodeSegmentAppend extends ValidationPath {
 
-            private final ValidationPath parent;
-            private final String path;
-            private final String nodeId;
+        private final ValidationPath parent;
+        private final String attribute;
+        private final String nodeId;
 
-            SimplePath(ValidationPath parent, String path, String nodeId) {
-                this.parent = parent;
-                this.path = path;
-                this.nodeId = nodeId;
-            }
-
-            @Override
-            public String toString() {
-                String p = path;
-                if (nodeId != null) {
-                    p = p + '[' + nodeId + ']';
-                }
-                if (parent == null) {
-                    return p;
-                } else {
-                    return parent + "/" + p;
-                }
-            }
+        NodeSegmentAppend(ValidationPath parent, String attribute, String nodeId) {
+            this.parent = parent;
+            this.attribute = attribute;
+            this.nodeId = nodeId;
         }
 
-        private static final class PathJoin extends ValidationPath {
-            private final ValidationPath parent;
-            private final String path;
-
-            PathJoin(ValidationPath parent, String path) {
-                this.parent = parent;
-                this.path = path;
+        @Override
+        public String toString() {
+            String p = attribute;
+            if (nodeId != null) {
+                p = p + '[' + nodeId + ']';
             }
-
-            @Override
-            public String toString() {
-                String prefix = parent.toString();
-
-                if (path.startsWith("/") && prefix.endsWith("/")) {
-                    return prefix + path.substring(1);
-                } else {
-                    return prefix + path;
-                }
-            }
-        }
-
-        private static final class StripLastPathSegment extends ValidationPath {
-            private final ValidationPath child;
-
-            StripLastPathSegment(ValidationPath child) {
-                this.child = child;
-            }
-
-            @Override
-            public String toString() {
-                return RMObjectValidationUtil.stripLastPathSegment(child.toString());
+            if (parent == null) {
+                return p;
+            } else {
+                return parent + "/" + p;
             }
         }
     }
+
+    private static final class PathJoin extends ValidationPath {
+        private final ValidationPath parent;
+        private final String path;
+
+        PathJoin(ValidationPath parent, String path) {
+            this.parent = parent;
+            this.path = path;
+        }
+
+        @Override
+        public String toString() {
+            String prefix = parent.toString();
+
+            if (path.startsWith("/") && prefix.endsWith("/")) {
+                return prefix + path.substring(1);
+            } else {
+                return prefix + path;
+            }
+        }
+    }
+
+    private static final class StripLastPathSegment extends ValidationPath {
+        private final ValidationPath fullPath;
+
+        StripLastPathSegment(ValidationPath fullPath) {
+            this.fullPath = fullPath;
+        }
+
+        @Override
+        public String toString() {
+            return RMObjectValidationUtil.stripLastPathSegment(fullPath.toString());
+        }
+    }
+}
