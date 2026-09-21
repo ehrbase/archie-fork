@@ -7,7 +7,7 @@ import com.nedap.archie.aom.CObject;
  */
 abstract class ValidationPath {
 
-    static ValidationPath ROOT = new ValidationPath(){
+    static ValidationPath ROOT = new ValidationPath() {
         @Override
         public String toString() {
             return "";
@@ -58,7 +58,12 @@ abstract class ValidationPath {
             if (parent == null) {
                 return p;
             } else {
-                return parent + "/" + p;
+                String parentStr =  parent.toString();
+                if (parentStr.endsWith("/")) {
+                    return parent +  p;
+                } else {
+                    return parent + "/" + p;
+                }
             }
         }
     }
@@ -75,11 +80,19 @@ abstract class ValidationPath {
         @Override
         public String toString() {
             String prefix = parent.toString();
+            if (prefix.endsWith("/")) {
+                prefix = prefix.substring(0, prefix.length() - 1);
+            }
+            String postfix = path.startsWith("/") ? path.substring(1) : path;
 
-            if (path.startsWith("/") && prefix.endsWith("/")) {
-                return prefix + path.substring(1);
+            if (postfix.isEmpty()) {
+                if (prefix.isEmpty()) {
+                    return "/";
+                } else {
+                    return prefix;
+                }
             } else {
-                return prefix + path;
+                return prefix + '/' + postfix;
             }
         }
     }
