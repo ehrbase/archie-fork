@@ -166,7 +166,7 @@ public class RMPathQuery {
                         }
                     } else if (!segment.hasNumberIndex()) {
                         //The object does not have an archetypeNodeId
-                        //in openehr, in archetypes everything has node ids. Datavalues do not in the rm. a bit ugly if you ask
+                        //in openEHR, in archetypes everything has node ids. Datavalues do not in the rm. a bit ugly if you ask
                         //me, but that's why there's no 'if there's a nodeId set, this won't match!' code here.
                         newCurrentObjects.add(createRMObjectWithPath(lookup, currentRMObject, newPath));
                     }
